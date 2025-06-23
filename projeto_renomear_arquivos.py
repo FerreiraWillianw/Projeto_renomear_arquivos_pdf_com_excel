@@ -19,8 +19,8 @@ COLUNA_PARTE_ADVERSA = "Contrário principal"
 COLUNA_NOME_ADVOGADO = "ADVOGADO"
 
 # 4. Parâmetros para tentativas de renomeação em caso de erro (arquivo em uso, etc.)
-NUM_TENTATIVAS = 3     # Tentar renomear 3 vezes
-ATRASO_SEGUNDOS = 1    # Esperar 1 segundo entre as tentativas
+NUM_TENTATIVAS = 3      # Tentar renomear 3 vezes
+ATRASO_SEGUNDOS = 1     # Esperar 1 segundo entre as tentativas
 
 # --- Fim das Configurações ---
 
@@ -65,6 +65,11 @@ def renomear_arquivos_por_planilha(
             coluna_advogado_planilha
         ]
 
+        # --- NOVA VALIDAÇÃO: Verifica se a planilha existe antes de tentar ler ---
+        if not os.path.exists(caminho_planilha):
+            raise FileNotFoundError(f"A planilha '{caminho_planilha}' não foi encontrada. Por favor, verifique o caminho.")
+        # --- FIM DA NOVA VALIDAÇÃO ---
+
         # 2. Carregar a planilha Excel com Pandas
         print(f"Lendo a planilha '{caminho_planilha}' na aba '{nome_aba_planilha}'...")
         df = pd.read_excel(
@@ -96,12 +101,10 @@ def renomear_arquivos_por_planilha(
 
         # 3. Listar arquivos na pasta
         if not os.path.exists(pasta_arquivos):
-            print(f"\nERRO: A pasta '{pasta_arquivos}' não existe. Por favor, verifique o caminho informado.")
-            return
+            raise FileNotFoundError(f"A pasta '{pasta_arquivos}' não existe. Por favor, verifique o caminho informado.")
 
         if not os.path.isdir(pasta_arquivos):
-            print(f"\nERRO: O caminho '{pasta_arquivos}' não é uma pasta válida. Por favor, verifique.")
-            return
+            raise NotADirectoryError(f"O caminho '{pasta_arquivos}' não é uma pasta válida. Por favor, verifique.")
 
         arquivos_na_pasta = [f for f in os.listdir(pasta_arquivos) if os.path.isfile(os.path.join(pasta_arquivos, f))]
         print(f"Encontrados {len(arquivos_na_pasta)} arquivos na pasta '{pasta_arquivos}'.")
@@ -157,7 +160,7 @@ def renomear_arquivos_por_planilha(
                         print(f"Renomeado: '{nome_arquivo_antigo}' -> '{novo_nome_arquivo}'")
                         arquivos_renomeados_com_sucesso += 1
                         renomeado = True
-                        break  # Sai do loop de tentativas se for bem-sucedido
+                        break   # Sai do loop de tentativas se for bem-sucedido
                     except OSError as e:
                         if tentativa < max_tentativas:
                             print(f"AVISO: Não foi possível renomear '{nome_arquivo_antigo}'. Erro: {e}. Tentando novamente em {atraso_entre_tentativas}s...")
@@ -179,10 +182,13 @@ def renomear_arquivos_por_planilha(
 
     except FileNotFoundError as e:
         print(f"\nERRO FATAL: Arquivo ou pasta não encontrado(a). Detalhes: {e}")
-        if "planilha" in str(e).lower() or "excel" in str(e).lower():
-            print(f"Verifique se o caminho da planilha '{caminho_planilha}' está correto.")
-        elif "pasta" in str(e).lower() or "directory" in str(e).lower():
-            print(f"Verifique se o caminho da pasta de arquivos '{pasta_arquivos}' está correto.")
+        # if "planilha" in str(e).lower() or "excel" in str(e).lower(): # Esta linha foi generalizada pela nova validação acima
+        #     print(f"Verifique se o caminho da planilha '{caminho_planilha}' está correto.")
+        # elif "pasta" in str(e).lower() or "directory" in str(e).lower(): # Esta linha foi generalizada pela nova validação acima
+        #     print(f"Verifique se o caminho da pasta de arquivos '{pasta_arquivos}' está correto.")
+    except NotADirectoryError as e: # Captura o novo erro específico para caminho não ser diretório
+        print(f"\nERRO FATAL: O caminho informado para a pasta de arquivos não é um diretório válido. Detalhes: {e}")
+        print(f"Verifique se o caminho '{pasta_arquivos}' realmente aponta para uma pasta.")
     except KeyError as e:
         print(f"\nERRO FATAL: Coluna não encontrada na planilha. Detalhes: {e}")
         print(f"Por favor, verifique se os nomes das colunas nas configurações (COLUNA_NUMERO_PROCESSO, COLUNA_NOME_CLIENTE, etc.) são EXATOS e case-sensitive na planilha.")
@@ -257,3 +263,8 @@ if __name__ == "__main__":
         coluna_advogado_planilha=COLUNA_NOME_ADVOGADO,
         pasta_arquivos=PASTA_DOS_MEUS_ARQUIVOS_INFORMADA # Usa o caminho informado pelo usuário
     )
+
+    # --- NOVO: Mantém o Prompt Aberto ---
+    print("\n--- Pressione ENTER para fechar a janela ---")
+    input()
+    # --- FIM DO NOVO ---
